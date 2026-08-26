@@ -1,54 +1,55 @@
+import argparse
 import socket
+import shlex
+import subprocess
 import sys
 import textwrap
-import subprocess
-import argparse
-import shlex
 import threading
 
 def execute(cmd):
     cmd = cmd.strip()
     if not cmd:
         return
-    output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
+    output = subprocess.check_output(shlex.split(cmd),stderr=subprocess.STDOUT)
     return output.decode()
 
-class Netcat :
+class NetCat:
     def __init__(self,args,buffer=None):
         self.args = args
         self.buffer = buffer
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt=(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        def run(self):
-            if self.agrs.listen:
-                self.listen
-            else:
-                self.send()
+    def run(self):
+        if self.args.listen:
+            self.listen()
+        else:
+            self.send()
 
     def send(self):
-        self.socket.connect((self.args.target,self.args.port))
+        self.socket.connect((self.args.target , self.args.port))
         if self.buffer:
             self.socket.send(self.buffer)
-        try:
-            while True:
-                recv_len = 1
-                response = ''
-                while recv_len:
-                    data = self.socket.recv(4096)
-                    recv_len = len(data)
-                    response += data.encode()
-                    if recv_len <4096:
-                        break
-                    if response:
-                        print(response)
-                        buffer = '>'
-                        buffer += '\n'
-                        self.socket.send(buffer.encode())
-        except KeyboardInterrupt:
-            print('System Terminat')
-            self.socket.close()
-            sys.exit()
+            try:
+                while True:
+                    recv_len = 1
+                    response = ''
+                    while recv_len:
+                        data = self.socket.recv(4096)
+                        recv_len = len(data)
+                        response += data.decode()
+                        if recv_len < 4096:
+                            break
+                        if response:
+                            print(response)
+                            buffer = input('>')
+                            buffer += '\n'
+                            self.socket.send(buffer.encode())
+            except KeyboardInterrupt:
+                print('User terminated.')
+                self.socket.close()
+                sys.exit()
+    
     def listen(self):
         self.socket.bind((self.args.target, self.args.port))
         self.socket.listen(5)
@@ -56,6 +57,7 @@ class Netcat :
             client_socket, _ = self.socket.accept()
             client_thread = threading.Thread(target=self.handle, args=(client_socket,))
             client_thread.start()
+    
     def handle(self, client_socket):
         if self.args.execute:
             output = execute(self.args.execute)
@@ -90,7 +92,9 @@ class Netcat :
                 except Exception as e:
                     print(f'server killed {e}')
                     self.socket.close()
-                    sys.exit()               
+                    sys.exit()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='BHP Net Tool',
@@ -115,5 +119,5 @@ if __name__ == '__main__':
     else:
         buffer = sys.stdin.read()
 
-nc = Netcat(args, buffer.encode())
-nc.run()
+    nc = NetCat(args, buffer.encode())
+    nc.run()
